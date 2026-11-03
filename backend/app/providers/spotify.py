@@ -252,3 +252,180 @@ class Spotify:
                 "popularity": integer(artist.get("popularity"), 100),
             },
         }
+
+    def fetch_discography_step(
+        self, identifier: str, checkpoint: dict | None, release_types: list[str]
+    ):
+        """One bounded HTTP page, no catalogue/track cap. State contains no credentials."""
+        import copy
+        import hashlib
+        import json
+
+        identifier = artist_identifier(identifier)
+        state = copy.deepcopy(checkpoint) if checkpoint else {}
+        deadline = time.monotonic() + 45
+        if not state:
+            artist = self._get(f"/artists/{identifier}", deadline)
+            if artist.get("id") != identifier or not isinstance(artist.get("name"), str):
+                raise SpotifyError("Spotify returned invalid artist metadata")
+            genres = artist.get("genres") or []
+            if not isinstance(genres, list):
+                raise SpotifyError("Spotify returned invalid genre metadata")
+            followers = artist.get("followers")
+            payload = {
+                "id": identifier,
+                "name": artist["name"],
+                "country": None,
+                "type": None,
+                "genres": [g for g in genres if isinstance(g, str)],
+                "metrics": {
+                    "followers": integer(followers.get("total"))
+                    if isinstance(followers, dict)
+                    else None,
+                    "popularity": integer(artist.get("popularity"), 100),
+                },
+            }
+            state = {
+                "phase": "releases",
+                "artist": {k: v for k, v in payload.items() if k != "metrics"},
+                "market": self.market,
+                "release_types": list(release_types),
+                "release_offset": 0,
+                "pending_releases": [],
+                "seen_releases": [],
+                "releases_imported": 0,
+                "tracks_imported": 0,
+                "track_offset": 0,
+                "track_positions": [],
+            }
+            return {"payload": payload, "checkpoint": state, "complete": False, "finalize": None}
+        if state.get("phase") == "done":
+            return {"payload": None, "checkpoint": state, "complete": True, "finalize": None}
+        market = state["market"]
+        if state["phase"] == "releases":
+            page = self._get(
+                f"/artists/{identifier}/albums",
+                deadline,
+                market=market,
+                include_groups=",".join(state["release_types"]),
+                limit=10,
+                offset=state["release_offset"],
+            )
+            rows = self._discography_rows(page)
+            if page.get("next") and not rows:
+                raise SpotifyError(
+                    "Spotify release pagination did not advance; import is incomplete"
+                )
+            page_key = hashlib.sha256(
+                json.dumps([row.get("id") for row in rows]).encode()
+            ).hexdigest()
+            if page.get("next") and page_key == state.get("last_release_page"):
+                raise SpotifyError("Spotify repeated a release page; import is incomplete")
+            seen = set(state["seen_releases"])
+            releases = []
+            for release in rows:
+                id = release.get("id", "")
+                if (
+                    not isinstance(id, str)
+                    or not ID.fullmatch(id)
+                    or not isinstance(release.get("name"), str)
+                ):
+                    raise SpotifyError("Spotify returned invalid release metadata")
+                if id in seen:
+                    continue
+                seen.add(id)
+                releases.append(
+                    {
+                        "id": id,
+                        "title": release["name"],
+                        "release_date": release.get("release_date"),
+                        "release_type": release.get("album_type"),
+                    }
+                )
+            state.update(
+                release_offset=state["release_offset"] + len(rows),
+                pending_releases=releases,
+                seen_releases=sorted(seen),
+                more_releases=bool(page.get("next")),
+                last_release_page=page_key,
+            )
+            state["phase"] = "tracks" if releases else "releases" if page.get("next") else "done"
+            return {
+                "payload": None,
+                "checkpoint": state,
+                "complete": state["phase"] == "done",
+                "finalize": None,
+            }
+        if state["phase"] != "tracks" or not state["pending_releases"]:
+            raise SpotifyError("Saved import state is invalid; contact the operator")
+        release = state["pending_releases"][0]
+        page = self._get(
+            f"/albums/{release['id']}/tracks",
+            deadline,
+            market=market,
+            limit=10,
+            offset=state["track_offset"],
+        )
+        rows = self._discography_rows(page)
+        if page.get("next") and not rows:
+            raise SpotifyError("Spotify track pagination did not advance; import is incomplete")
+        positions = set(state.get("track_positions", []))
+        tracks = []
+        for offset, track in enumerate(rows, state["track_offset"] + 1):
+            id = track.get("id", "")
+            if (
+                not isinstance(id, str)
+                or not ID.fullmatch(id)
+                or not isinstance(track.get("name"), str)
+            ):
+                raise SpotifyError(
+                    "Spotify returned an unavailable track; this import remains incomplete"
+                )
+            disc, position = (
+                integer(track.get("disc_number")) or 1,
+                integer(track.get("track_number")) or offset,
+            )
+            key = f"{disc}:{position}"
+            if key in positions:
+                raise SpotifyError(
+                    "Spotify repeated track positions; this import remains incomplete"
+                )
+            positions.add(key)
+            tracks.append(
+                {
+                    "id": id,
+                    "title": track["name"],
+                    "duration_ms": integer(track.get("duration_ms")),
+                    "disc_number": disc,
+                    "position": position,
+                }
+            )
+        state["tracks_imported"] += len(tracks)
+        state["track_offset"] += len(rows)
+        state["track_positions"] = sorted(positions)
+        payload = {**state["artist"], "albums": [{**release, "tracks": tracks}]}
+        finalize = None
+        if not page.get("next"):
+            finalize = {"id": release["id"], "positions": sorted(positions)}
+            state["releases_imported"] += 1
+            state["pending_releases"] = state["pending_releases"][1:]
+            state["track_positions"], state["track_offset"] = [], 0
+            if not state["pending_releases"]:
+                state["phase"] = "releases" if state["more_releases"] else "done"
+        return {
+            "payload": payload,
+            "checkpoint": state,
+            "complete": state["phase"] == "done",
+            "finalize": finalize,
+        }
+
+    @staticmethod
+    def _discography_rows(page):
+        rows = page.get("items")
+        if (
+            not isinstance(rows, list)
+            or len(rows) > 10
+            or any(not isinstance(row, dict) for row in rows)
+        ):
+            raise SpotifyError("Spotify returned invalid catalogue pagination")
+        return rows

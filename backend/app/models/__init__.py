@@ -2,6 +2,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     Column,
     DateTime,
@@ -140,6 +141,10 @@ class SpotifyImportBatch(Base):
     __table_args__ = (CheckConstraint("status IN ('active','paused','cancelled','completed')"),)
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     request_id: Mapped[uuid.UUID] = mapped_column(Uuid, unique=True)
+    import_mode: Mapped[str] = mapped_column(String(10), default="full")
+    release_types: Mapped[list[str]] = mapped_column(
+        JSON, default=lambda: ["album", "single", "compilation"]
+    )
     name: Mapped[str] = mapped_column(String(80), default="Spotify bulk import")
     status: Mapped[str] = mapped_column(String(20), default="active", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
@@ -165,6 +170,8 @@ class SpotifyImportItem(Base):
     spotify_id: Mapped[str] = mapped_column(String(22))
     status: Mapped[str] = mapped_column(String(20), default="pending")
     attempts: Mapped[int] = mapped_column(default=0)
+    rate_limit_attempts: Mapped[int] = mapped_column(default=0)
+    checkpoint: Mapped[dict | None] = mapped_column(JSON)
     available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     artist_id: Mapped[uuid.UUID | None] = mapped_column(

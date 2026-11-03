@@ -24,7 +24,18 @@ ArtistInput = Annotated[str, Field(min_length=1, max_length=300), AfterValidator
 class BatchRequest(BaseModel):
     request_id: UUID
     artist_ids: list[ArtistInput] = Field(min_length=1, max_length=100)
+    import_mode: Literal["full"] = "full"
+    release_types: list[Literal["album", "single", "compilation", "appears_on"]] = Field(
+        default_factory=lambda: ["album", "single", "compilation"], min_length=1, max_length=4
+    )
     name: str = Field(default="Spotify bulk import", min_length=1, max_length=80)
+
+    @field_validator("release_types")
+    @classmethod
+    def normalize_groups(cls, values):
+        return [
+            group for group in ["album", "single", "compilation", "appears_on"] if group in values
+        ]
 
     @field_validator("artist_ids")
     @classmethod
@@ -45,14 +56,24 @@ def require_worker():
 def access(response: Response):
     require_worker()
     response.headers["Cache-Control"] = "no-store"
-    return {"configured": True, "max_artists": 100}
+    return {"configured": True, "max_artists": 100, "full_discography": True}
 
 
 @router.post("", status_code=202)
 def queue(body: BatchRequest, db: DB, response: Response):
     require_worker()
     response.headers["Cache-Control"] = "no-store"
-    return batch_json(db, create_batch(db, body.artist_ids, body.name, body.request_id))
+    return batch_json(
+        db,
+        create_batch(
+            db,
+            body.artist_ids,
+            body.name,
+            body.request_id,
+            import_mode="full",
+            release_types=body.release_types,
+        ),
+    )
 
 
 @router.get("/{batch_id}")

@@ -16,7 +16,7 @@ The screenshot uses explicitly labelled fictional test fixtures. Normal deployme
 - Album edition lists, partial source dates, genre representation and release-year trends.
 - Filtered CSV/PDF reports with source attribution, report limits and formula-safe CSV fields.
 - Bulk-import screen with CSV/pasted links, durable progress, pause/cancel and retry of failed artists. See [bulk import](docs/bulk-import.md).
-- Spotify Client Credentials integration with bounded album/track imports, source links, token refresh and actual metric availability snapshots.
+- Spotify Client Credentials integration with resumable full-discography website imports (albums, singles/EPs and optional release groups), source links, token refresh and actual metric availability snapshots.
 - Bounded, operator-authorized MusicBrainz ingestion with paced requests, retries, transactional upserts and run auditing.
 - PostgreSQL migrations, test suites, security controls, CI and Vercel/Render configuration.
 

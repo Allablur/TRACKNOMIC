@@ -40,7 +40,7 @@ def mapped_entity(db: Session, kind: str, provider: str, external_id: str, model
     return entity
 
 
-def save_artist(db: Session, payload: dict, provider: str) -> Artist:
+def save_artist(db: Session, payload: dict, provider: str, replace_tracks=True) -> Artist:
     artist = mapped_entity(
         db,
         "artist",
@@ -75,8 +75,9 @@ def save_artist(db: Session, payload: dict, provider: str) -> Artist:
         if artist not in album.artists:
             album.artists.append(artist)
         # Replace this release's positions transactionally; re-import is idempotent.
-        album.tracks.clear()
-        db.flush()
+        if replace_tracks:
+            album.tracks.clear()
+            db.flush()
         for track in item.get("tracks", []):
             recording = mapped_entity(
                 db,
@@ -88,13 +89,14 @@ def save_artist(db: Session, payload: dict, provider: str) -> Artist:
                 duration_ms=track.get("duration_ms"),
                 recording_identifier=f"{provider}:{track['id']}",
             )
-            album.tracks.append(
-                AlbumTrack(
-                    track=recording,
-                    disc_number=track.get("disc_number", 1),
-                    position=track["position"],
+            disc_number = track.get("disc_number", 1)
+            existing = db.get(AlbumTrack, (album.id, disc_number, track["position"]))
+            if existing is not None:
+                existing.track = recording
+            else:
+                album.tracks.append(
+                    AlbumTrack(track=recording, disc_number=disc_number, position=track["position"])
                 )
-            )
     if "metrics" in payload:
         # Record availability as well as values; absent fields must not retain old scores.
         metrics = payload["metrics"]

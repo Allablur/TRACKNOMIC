@@ -152,10 +152,17 @@ export type BulkItem = {
   error: string | null;
   available_at: string;
   last_http_status: number | null;
+  progress?: {
+    phase: string;
+    releases_imported: number;
+    tracks_imported: number;
+  } | null;
 };
 export type BulkBatch = {
   id: string;
   name: string;
+  import_mode?: "full" | "limited";
+  release_types?: string[];
   status: "active" | "paused" | "cancelled" | "completed";
   server_time: string;
   next_attempt_at: string | null;

@@ -49,7 +49,7 @@ def provider(monkeypatch):
 
 
 def create(db, ids=IDS[:2]):
-    return bulk.create_batch(db, ids, "Queue test", uuid.uuid4())
+    return bulk.create_batch(db, ids, "Queue test", uuid.uuid4(), import_mode="limited")
 
 
 def clear_cooldown(db):
