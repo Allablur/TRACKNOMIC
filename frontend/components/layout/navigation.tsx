@@ -10,6 +10,7 @@ import {
   ChartNoAxesCombined,
   FileChartColumn,
   Settings,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 const links = [
@@ -19,6 +20,7 @@ const links = [
   ["/albums", "Albums", Disc3],
   ["/genres", "Genres", ChartNoAxesCombined],
   ["/reports", "Reports", FileChartColumn],
+  ["/imports", "Bulk import", Upload],
   ["/settings", "Settings", Settings],
 ] as const;
 export function Navigation() {

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -121,11 +121,14 @@ def ingest(db: Session, fetch, provider: str = "musicbrainz") -> Artist:
         run.finished_at = datetime.now(UTC)
         db.commit()
         return artist
-    except Exception:
+    except Exception as exc:
         db.rollback()
         failed = db.get(IngestionRun, run_id)
         failed.status = "failed"
         failed.finished_at = datetime.now(UTC)
         failed.error = "Import failed; no catalogue changes were committed."
+        retry_after = getattr(exc, "retry_after", None)
+        if getattr(exc, "status_code", None) == 429 and isinstance(retry_after, int):
+            failed.retry_after_at = datetime.now(UTC) + timedelta(seconds=max(1, retry_after))
         db.commit()
         raise

@@ -121,10 +121,56 @@ class ArtistMetricSnapshot(Base):
 
 class IngestionRun(Base):
     __tablename__ = "ingestion_runs"
-    __table_args__ = (CheckConstraint("status IN ('running','succeeded','failed')"),)
+    __table_args__ = (
+        CheckConstraint("status IN ('running','succeeded','failed')"),
+        Index("ix_ingestion_provider_started", "provider", "started_at"),
+        Index("ix_ingestion_provider_retry", "provider", "retry_after_at"),
+    )
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     provider: Mapped[str] = mapped_column(String(50))
     status: Mapped[str] = mapped_column(String(20), default="running")
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(Text)
+    retry_after_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SpotifyImportBatch(Base):
+    __tablename__ = "spotify_import_batches"
+    __table_args__ = (CheckConstraint("status IN ('active','paused','cancelled','completed')"),)
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(Uuid, unique=True)
+    name: Mapped[str] = mapped_column(String(80), default="Spotify bulk import")
+    status: Mapped[str] = mapped_column(String(20), default="active", index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
+    items: Mapped[list["SpotifyImportItem"]] = relationship(
+        cascade="all, delete-orphan", order_by="SpotifyImportItem.position"
+    )
+
+
+class SpotifyImportItem(Base):
+    __tablename__ = "spotify_import_items"
+    __table_args__ = (
+        UniqueConstraint("batch_id", "spotify_id"),
+        CheckConstraint("status IN ('pending','running','succeeded','failed','cancelled')"),
+        CheckConstraint("position > 0 AND attempts >= 0"),
+        Index("ix_spotify_import_ready", "status", "available_at"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    batch_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("spotify_import_batches.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int]
+    spotify_id: Mapped[str] = mapped_column(String(22))
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    attempts: Mapped[int] = mapped_column(default=0)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    artist_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("artists.id", ondelete="SET NULL")
+    )
+    artist_name: Mapped[str | None] = mapped_column(String(300))
+    error: Mapped[str | None] = mapped_column(Text)
+    last_http_status: Mapped[int | None]
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
