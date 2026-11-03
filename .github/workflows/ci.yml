@@ -1,0 +1,101 @@
+name: Validate Trackonomics
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: trackonomics
+          POSTGRES_PASSWORD: trackonomics_local
+          POSTGRES_DB: trackonomics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trackonomics -d trackonomics"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.12.23'
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install backend
+        working-directory: backend
+        run: uv sync --locked
+      - name: Migrations and backend checks
+        working-directory: backend
+        run: |
+          uv run alembic upgrade head
+          uv run alembic downgrade base
+          uv run alembic upgrade head
+          uv run alembic check
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run pytest
+          uv run python -m app.seed
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+      - name: Frontend checks
+        working-directory: frontend
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run format:check
+          npm test
+          npm run build
+          npx playwright install --with-deps chromium
+      - name: Start API
+        working-directory: backend
+        # A long-lived `uv run` holds the cache lock and blocks setup-uv post-job pruning.
+        run: |
+          .venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 > "$RUNNER_TEMP/trackonomics-api.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/trackonomics-api.pid"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/health; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/trackonomics-api.log"
+          exit 1
+      - name: Browser checks
+        working-directory: frontend
+        run: npm run test:e2e
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/trackonomics-api.pid" ]; then
+            api_pid=$(cat "$RUNNER_TEMP/trackonomics-api.pid")
+            if kill -0 "$api_pid" 2>/dev/null; then
+              kill "$api_pid"
+              for attempt in $(seq 1 10); do
+                if ! kill -0 "$api_pid" 2>/dev/null; then break; fi
+                sleep 1
+              done
+              if kill -0 "$api_pid" 2>/dev/null; then
+                kill -KILL "$api_pid"
+              fi
+            fi
+          fi
+      - name: Retain failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: frontend/test-results/
+          retention-days: 7
