@@ -62,3 +62,11 @@ Not executed: live MusicBrainz requests, live hosting deployment, remote GitHub 
 Explain the data path: a bounded provider response becomes transactional canonical rows and source mappings, SQL applies catalogue scope and aggregation, pandas fills release-year gaps, FastAPI exposes those results, and the UI visualizes them without inventing metrics. Distinguish release editions from unique recordings and catalogue representation from global popularity.
 
 Defend the choices: partial dates avoid fabricated precision; nullable snapshots avoid invented audience data; source IDs allow repeatable upserts; savepoints isolate database tests; advisory locks survive multiple workers; batched relationships avoid N+1 queries; report caps and escaping bound work and spreadsheet/PDF interpretation. Discuss limitations honestly: bounded imports, no cross-provider identity resolution, no user accounts, no live Spotify metrics, no production-scale performance claim, and deployment configuration versus an actual live release.
+
+## CI follow-up — uv cache cleanup lock
+
+GitHub screenshots showed all application validation steps passing, including browser checks. The job failed only in `Post Run astral-sh/setup-uv@v6`: `uv cache prune --ci` timed out after 300 seconds waiting for a cache lock. The long-lived API launched with `uv run uvicorn` retained that lock through post-job cleanup.
+
+Changed `.github/workflows/ci.yml` to start the installed `.venv/bin/uvicorn` directly, record its PID, and stop that specific API process in an `always()` cleanup step before action post-hooks. Caching remains enabled, and all test/check commands remain unchanged.
+
+Verification used a clean `git archive` source copy, a dedicated uv cache and disposable PostgreSQL database. Reversible migrations, schema-drift check, backend lint/format, all 29 backend tests, fresh npm installation, frontend lint/type/format/build and four frontend tests passed. A targeted reproduction confirmed the original uv startup causes cache-prune timeout (shortened to two seconds for the test). With the exact corrected workflow startup, cache pruning succeeded while the API ran; all six browser tests passed; the exact workflow shutdown step and final cache prune also passed. GitHub's new remote run must still confirm the pushed fix; API access to Actions logs is denied in this environment.
