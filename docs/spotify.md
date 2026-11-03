@@ -39,6 +39,8 @@ Keep `API_URL` pointing to your actual Render HTTPS API base URL, with no traili
 
 ## 4. Import your first real artist
 
+For multiple artists, use **Bulk import** in the website: unlock with your operator token, paste links or upload a CSV, and start the saved queue. See [bulk-import.md](bulk-import.md). No Swagger JSON is needed. The single-artist alternative follows below.
+
 1. Open the artist in Spotify. Use **Share → Copy link to artist**. Use an artist link, not an album, playlist or track link.
 2. Open `https://YOUR-API-HOST/docs` in a trusted browser.
 3. Choose **Authorize**, enter the **INGESTION_TOKEN** you configured in Render, and authorize the Bearer scheme. Enter the token itself if the UI already supplies the Bearer prefix.

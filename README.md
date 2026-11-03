@@ -15,6 +15,7 @@ The screenshot uses explicitly labelled fictional test fixtures. Normal deployme
 - Comparison of two to five artists with explicit unavailable-metric states.
 - Album edition lists, partial source dates, genre representation and release-year trends.
 - Filtered CSV/PDF reports with source attribution, report limits and formula-safe CSV fields.
+- Bulk-import screen with CSV/pasted links, durable progress, pause/cancel and retry of failed artists. See [bulk import](docs/bulk-import.md).
 - Spotify Client Credentials integration with bounded album/track imports, source links, token refresh and actual metric availability snapshots.
 - Bounded, operator-authorized MusicBrainz ingestion with paced requests, retries, transactional upserts and run auditing.
 - PostgreSQL migrations, test suites, security controls, CI and Vercel/Render configuration.
@@ -86,6 +87,7 @@ Live ingestion is disabled by default. For Spotify, securely set `SPOTIFY_CLIENT
 
 ## Documentation and deployment
 
+- [Bulk-import artists from the website](docs/bulk-import.md)
 - [Connect real Spotify data step by step](docs/spotify.md)
 - [Phase-by-phase implementation, files, commands and results](docs/phase-log.md)
 - [Architecture and interview talking points](docs/architecture.md)

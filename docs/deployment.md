@@ -28,3 +28,7 @@ Run `python scripts/smoke.py --api https://YOUR-API-HOST --frontend https://YOUR
 `.github/workflows/ci.yml` runs reversible migrations, backend tests/lint, frontend unit/type/lint/format/build checks and real Chromium tests with disposable PostgreSQL and seeded demo data. Local equivalents were executed; the remote GitHub Actions run remains unverified until pushed.
 
 For release rollback, redeploy the previous Git revision. Review schema compatibility first; do not automatically downgrade a production database. Take managed database backups before schema releases and exercise restore in staging. Health 503 means database readiness failed; inspect provider logs using the request ID without copying credentials. Gate a production launch on TLS, backups, ingress rate limits/timeouts, monitoring and a tested recovery path. See `security.md` for scope and remaining operational controls.
+
+## Bulk imports
+
+After deploying the bulk-import migration/API and frontend, the website exposes `/imports`. The API lifespan starts a database-backed worker when INGESTION_ENABLED=true and BULK_WORKER_ENABLED=true (default). No extra service is provisioned. Keep existing server credentials/operator token private. Free-plan sleep can pause progress; saved batches resume when the API wakes. See bulk-import.md for controls, restart recovery and operator access.

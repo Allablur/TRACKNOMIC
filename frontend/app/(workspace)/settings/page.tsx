@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHeading } from "@/components/layout/page-heading";
 export default function Page() {
   return (
@@ -6,6 +7,11 @@ export default function Page() {
         title="Workspace settings"
         description="Real metadata from Spotify, with source attribution and explicit availability."
       />
+      <p className="mb-6">
+        <Link href="/imports" className="font-medium text-primary underline">
+          Open bulk import →
+        </Link>
+      </p>
       <section className="space-y-6 rounded-xl border border-border bg-white p-6">
         <div>
           <h2 className="font-semibold">Spotify · Default catalogue source</h2>
