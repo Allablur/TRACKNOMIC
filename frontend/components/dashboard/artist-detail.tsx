@@ -4,6 +4,7 @@ import { SourceLinks } from "./source-links";
 import { useResource, metric } from "@/lib/api";
 import type { Artist, Album } from "@/lib/types";
 import { PageHeading } from "@/components/layout/page-heading";
+import { ArtistStatistics } from "./artist-statistics";
 import { AlbumTable } from "./albums";
 import { DataState, Notice, panel } from "./shared";
 export function ArtistDetail({ id }: { id: string }) {
@@ -51,6 +52,7 @@ export function ArtistDetail({ id }: { id: string }) {
               .
             </p>
           </section>
+          <ArtistStatistics id={id} />
           <h2 className="mb-4 text-xl font-semibold">Discography</h2>
           <DataState {...albums} empty={albums.data?.items.length === 0} />
           {albums.data && albums.data.items.length > 0 && (

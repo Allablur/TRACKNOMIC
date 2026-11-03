@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.analytics.artist_stats import catalogue_stats
 from app.analytics.catalogue import (
     Provider,
     albums_json,
@@ -99,6 +100,13 @@ def artist_albums(artist_id: UUID, db: DB):
         .order_by(Album.release_date.desc().nulls_last(), Album.id)
     ).all()
     return {"items": albums_json(db, list(items))}
+
+
+@router.get("/artists/{artist_id}/catalogue-stats", tags=["analytics"])
+def artist_catalogue_stats(artist_id: UUID, db: DB):
+    if db.get(Artist, artist_id) is None:
+        raise HTTPException(404, "Artist not found")
+    return catalogue_stats(db, artist_id)
 
 
 @router.get("/albums", tags=["albums"])
