@@ -53,6 +53,9 @@ jobs:
         working-directory: frontend
         run: npm ci
       - name: Frontend checks
+        # Explicit fixture build; production defaults to Spotify and never auto-seeds.
+        env:
+          NEXT_PUBLIC_DEFAULT_PROVIDER: demo
         working-directory: frontend
         run: |
           npm run lint

@@ -24,7 +24,7 @@ router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 class ReportRequest(BaseModel):
     format: Literal["csv", "pdf"] = "csv"
-    provider: Provider = "all"
+    provider: Provider = "spotify"
     q: str = Field(default="", max_length=150)
     country: str = Field(default="", max_length=3)
 

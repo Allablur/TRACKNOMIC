@@ -43,7 +43,7 @@ def artist(db):
 
 
 def test_search_detail_discography_and_unavailable_metrics(client, artist):
-    result = client.get("/api/v1/artists/search", params={"q": "API%"}).json()
+    result = client.get("/api/v1/artists/search", params={"q": "API%", "provider": "all"}).json()
     assert result["total"] == 1
     assert result["items"][0]["followers"] is None
     assert result["items"][0]["sources"][0]["provider"] == "test"
@@ -52,7 +52,7 @@ def test_search_detail_discography_and_unavailable_metrics(client, artist):
 
 
 def test_analytics_filters_and_empty_catalogue(client, artist):
-    params = {"q": "API%"}
+    params = {"q": "API%", "provider": "all"}
     assert client.get("/api/v1/dashboard/overview", params=params).json()["tracks"] == 1
     assert client.get("/api/v1/analytics/genres", params=params).json()["items"] == [
         {"genre": "test-api-genre", "artists": 1}

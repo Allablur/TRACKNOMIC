@@ -12,7 +12,9 @@ pytestmark = pytest.mark.integration
 
 def test_filtered_csv_and_formula_escaping(client, db):
     save_artist(db, {"id": "report-test", "name": "=SUM(1,1)", "country": "ZA"}, "test")
-    response = client.post("/api/v1/reports", json={"format": "csv", "q": "=SUM"})
+    response = client.post(
+        "/api/v1/reports", json={"format": "csv", "q": "=SUM", "provider": "all"}
+    )
     assert response.status_code == 200
     assert response.headers["content-disposition"].endswith('.csv"')
     rows = list(csv.DictReader(io.StringIO(response.content.decode("utf-8-sig"))))
@@ -26,7 +28,9 @@ def test_filtered_csv_and_formula_escaping(client, db):
 
 def test_pdf_is_readable_attributed_and_has_no_invented_metrics(client, db):
     save_artist(db, {"id": "pdf-test", "name": "PDF Artist"}, "test")
-    response = client.post("/api/v1/reports", json={"format": "pdf", "q": "PDF Artist"})
+    response = client.post(
+        "/api/v1/reports", json={"format": "pdf", "q": "PDF Artist", "provider": "all"}
+    )
     assert response.status_code == 200 and response.content.startswith(b"%PDF")
     text = " ".join(page.extract_text() for page in PdfReader(io.BytesIO(response.content)).pages)
     assert "PDF Artist" in text and "Unavailable" in text
