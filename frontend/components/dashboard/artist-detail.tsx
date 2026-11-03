@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SourceLinks } from "./source-links";
 import { useResource, metric } from "@/lib/api";
 import type { Artist, Album } from "@/lib/types";
 import { PageHeading } from "@/components/layout/page-heading";
@@ -42,11 +43,8 @@ export function ArtistDetail({ id }: { id: string }) {
               ))}
             </dl>
             <p className="mt-5 text-xs text-muted-foreground">
-              Sources:{" "}
-              {artist.data.sources
-                .map((s) => `${s.provider} (${s.external_id})`)
-                .join(", ")}
-              . Metrics: {artist.data.metrics_provider || "Unavailable"}
+              Sources: <SourceLinks sources={artist.data.sources} />. Metrics:{" "}
+              {artist.data.metrics_provider || "Unavailable"}
               {artist.data.metrics_captured_at
                 ? ` · captured ${artist.data.metrics_captured_at}`
                 : ""}

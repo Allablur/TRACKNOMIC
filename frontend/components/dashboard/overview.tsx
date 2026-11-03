@@ -51,7 +51,7 @@ export function OverviewView({ genreOnly = false }: { genreOnly?: boolean }) {
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">
                   {value === null
-                    ? "Not supplied by current sources"
+                    ? "See artist profiles for supported values"
                     : "Within selected filters"}
                 </p>
               </article>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SourceLinks } from "./source-links";
 import { useState } from "react";
 import { useResource, metric } from "@/lib/api";
 import type { Artist, Page } from "@/lib/types";
@@ -174,12 +175,7 @@ export function ArtistsView({ compare = false }: { compare?: boolean }) {
                   </div>
                 </dl>
                 <p className="mt-4 border-t border-border pt-3 text-xs text-muted-foreground">
-                  Source:{" "}
-                  {artist.sources
-                    .map((s) =>
-                      s.provider === "demo" ? "Fictional demo" : s.provider,
-                    )
-                    .join(", ") || "Unattributed"}
+                  Source: <SourceLinks sources={artist.sources} />
                 </p>
               </article>
             ))}

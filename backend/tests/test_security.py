@@ -95,7 +95,8 @@ def test_search_query_budget_is_constant(client, db):
         event.listen(engine, "before_cursor_execute", capture)
         try:
             response = client.get(
-                "/api/v1/artists/search", params={"q": "Performance fixture", "limit": limit}
+                "/api/v1/artists/search",
+                params={"q": "Performance fixture", "limit": limit, "provider": "all"},
             )
             assert response.status_code == 200 and len(response.json()["items"]) == limit
         finally:

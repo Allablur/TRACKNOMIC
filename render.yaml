@@ -20,6 +20,13 @@ services:
         value: "false"
       - key: CORS_ORIGINS
         value: '[]'
+      - key: SPOTIFY_MARKET
+        value: ZA
+      - key: SPOTIFY_MAX_ALBUMS
+        value: "5"
+      - key: SPOTIFY_MAX_TRACKS_PER_ALBUM
+        value: "50"
+      # Add Spotify client credentials and ingestion token securely in Render after creation.
       - key: MUSICBRAINZ_MAX_RELEASES
         value: "20"
       - key: MUSICBRAINZ_USER_AGENT

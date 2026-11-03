@@ -3,7 +3,16 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Album, AlbumTrack, Artist, Genre, IngestionRun, SourceMapping, Track
+from app.models import (
+    Album,
+    AlbumTrack,
+    Artist,
+    ArtistMetricSnapshot,
+    Genre,
+    IngestionRun,
+    SourceMapping,
+    Track,
+)
 
 
 def mapped_entity(db: Session, kind: str, provider: str, external_id: str, model, **fields):
@@ -86,6 +95,17 @@ def save_artist(db: Session, payload: dict, provider: str) -> Artist:
                     position=track["position"],
                 )
             )
+    if "metrics" in payload:
+        # Record availability as well as values; absent fields must not retain old scores.
+        metrics = payload["metrics"]
+        db.add(
+            ArtistMetricSnapshot(
+                artist_id=artist.id,
+                provider=provider,
+                followers=metrics.get("followers"),
+                popularity=metrics.get("popularity"),
+            )
+        )
     db.flush()
     return artist
 

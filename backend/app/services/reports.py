@@ -31,6 +31,7 @@ def csv_report(artists: list[dict], filters: dict) -> bytes:
         "metrics_provider",
         "metrics_captured_at",
         "sources",
+        "source_urls",
         "scope",
         "generated_at",
         "filters",
@@ -42,6 +43,7 @@ def csv_report(artists: list[dict], filters: dict) -> bytes:
         row = {key: artist.get(key) for key in fields}
         row.update(
             sources="; ".join(f"{s['provider']}:{s['external_id']}" for s in artist["sources"]),
+            source_urls="; ".join(s["url"] for s in artist["sources"] if s.get("url")),
             scope="Tracked catalogue; demo sources are fictional; missing metrics unavailable",
             generated_at=generated,
             filters=str(filters),
@@ -120,7 +122,10 @@ def pdf_report(
         def metric(key, item=artist):
             return "Unavailable" if item[key] is None else str(item[key])
 
-        sources = ", ".join(f"{s['provider']}:{s['external_id']}" for s in artist["sources"])
+        sources = ", ".join(
+            f"{s['provider']}:{s['external_id']}" + (" | " + s["url"] if s.get("url") else "")
+            for s in artist["sources"]
+        )
         source_text = (
             sources
             + " | Metrics: "

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { SourceLinks } from "./source-links";
 import { useState } from "react";
 import { useResource } from "@/lib/api";
 import type { Album, Page } from "@/lib/types";
@@ -52,11 +53,7 @@ export function AlbumTable({ items }: { items: Album[] }) {
               <td className="p-3">{a.release_type || "Unavailable"}</td>
               <td className="p-3">{a.track_count}</td>
               <td className="p-3">
-                {a.sources
-                  .map((s) =>
-                    s.provider === "demo" ? "Fictional demo" : s.provider,
-                  )
-                  .join(", ")}
+                <SourceLinks sources={a.sources} />
               </td>
             </tr>
           ))}

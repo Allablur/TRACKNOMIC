@@ -4,40 +4,81 @@ export default function Page() {
     <>
       <PageHeading
         title="Workspace settings"
-        description="Data sources and the limits behind your catalogue."
+        description="Real metadata from Spotify, with source attribution and explicit availability."
       />
       <section className="space-y-6 rounded-xl border border-border bg-white p-6">
         <div>
-          <h2 className="font-semibold">
-            MusicBrainz · Primary metadata provider
-          </h2>
+          <h2 className="font-semibold">Spotify · Default catalogue source</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Attributed artist metadata, tags, official release editions, and
-            recordings. Imports are bounded and require server-side
-            authorization and an identifying User-Agent.
+            Import real artist names, album and single releases, track metadata,
+            and available genre tags using your Spotify Developer app. Supported
+            fields depend on app access and market. Follower and popularity
+            values are shown only when actually supplied.
           </p>
         </div>
         <div>
-          <h2 className="font-semibold">Demo catalogue · Fictional</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Explicitly loaded sample records for exploring the application
-            without credentials. These are not real artists or real-world
-            measurements.
+          <h2 className="font-semibold">Connect your Spotify Developer app</h2>
+          <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-muted-foreground">
+            <li>
+              Create an app in the{" "}
+              <a
+                className="text-primary underline"
+                href="https://developer.spotify.com/dashboard"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Spotify Developer Dashboard
+              </a>{" "}
+              and select Web API.
+            </li>
+            <li>
+              Set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in the API host’s
+              secure environment settings. Set INGESTION_ENABLED=true and a
+              strong INGESTION_TOKEN.
+            </li>
+            <li>
+              Redeploy the API. In its /docs page, authorize with your ingestion
+              token and use POST /api/v1/ingestion/spotify/artists with a
+              Spotify artist share link.
+            </li>
+            <li>
+              Refresh the catalogue. Repeat imports update existing Spotify
+              records; requests are rate-limited.
+            </li>
+          </ol>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Client credentials stay on the API server. This page does not reveal
+            whether a particular deployment has configured them. See
+            docs/spotify.md in the repository for complete setup and
+            troubleshooting.
           </p>
         </div>
         <div>
-          <h2 className="font-semibold">Spotify · Not connected</h2>
+          <h2 className="font-semibold">Market and import scope</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Optional supplementary integration for a later release. No Spotify
-            metrics are assumed available.
+            The default market is ZA. Each import fetches up to five
+            albums/singles and up to fifty track positions per release. These
+            limits are configurable on the API server; tracked counts are not
+            complete Spotify discography or listening statistics. Country is
+            unavailable unless a provider supplies it; market is not an artist’s
+            country.
           </p>
         </div>
         <div>
-          <h2 className="font-semibold">Server configuration</h2>
+          <h2 className="font-semibold">MusicBrainz · Additional source</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Manage database settings, ingestion authorization and data-source
-            identity through secure server environment variables. Credentials
-            are never managed in this browser.
+            Existing MusicBrainz metadata remains available through the source
+            filter. Providers retain separate identifiers; duplicate real-world
+            artists are not automatically merged across providers.
+          </p>
+        </div>
+        <div>
+          <h2 className="font-semibold">No automatic sample data</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The normal workspace shows Spotify records and starts empty until
+            real imports succeed. Existing fictional records are excluded by
+            default. CI uses isolated, explicitly labelled test fixtures; there
+            is no synthetic fallback for failed imports.
           </p>
         </div>
       </section>

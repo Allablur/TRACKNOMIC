@@ -1,4 +1,8 @@
-export type Source = { provider: string; external_id: string };
+export type Source = {
+  provider: string;
+  external_id: string;
+  url?: string | null;
+};
 export type Artist = {
   id: string;
   name: string;

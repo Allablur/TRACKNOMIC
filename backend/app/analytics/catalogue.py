@@ -15,17 +15,23 @@ from app.models import (
     artist_albums,
     artist_genres,
 )
+from app.services.attribution import source_json
 
-Provider = Literal["all", "demo", "musicbrainz"]
+Provider = Literal["spotify", "live", "all", "demo", "musicbrainz"]
 
 
-def artist_scope(provider: str = "all", q: str = "", country: str = ""):
+def artist_scope(provider: str = "spotify", q: str = "", country: str = ""):
     statement = select(Artist)
     if provider != "all":
         statement = statement.where(
             Artist.id.in_(
                 select(SourceMapping.entity_id).where(
-                    SourceMapping.entity_type == "artist", SourceMapping.provider == provider
+                    SourceMapping.entity_type == "artist",
+                    (
+                        SourceMapping.provider.in_(["spotify", "musicbrainz"])
+                        if provider == "live"
+                        else SourceMapping.provider == provider
+                    ),
                 )
             )
         )
@@ -38,7 +44,7 @@ def artist_scope(provider: str = "all", q: str = "", country: str = ""):
     return statement
 
 
-def scoped_albums(provider="all", q="", country=""):
+def scoped_albums(provider="spotify", q="", country=""):
     artists = artist_scope(provider, q, country).with_only_columns(Artist.id)
     return select(Album).where(
         Album.id.in_(select(artist_albums.c.album_id).where(artist_albums.c.artist_id.in_(artists)))
@@ -59,9 +65,7 @@ def artists_json(db: Session, artists: list[Artist]) -> list[dict]:
             SourceMapping.entity_type == "artist", SourceMapping.entity_id.in_(ids)
         )
     ):
-        sources.setdefault(mapping.entity_id, []).append(
-            {"provider": mapping.provider, "external_id": mapping.external_id}
-        )
+        sources.setdefault(mapping.entity_id, []).append(source_json(mapping))
     ranked = (
         select(
             ArtistMetricSnapshot.id,
@@ -137,9 +141,7 @@ def albums_json(db: Session, albums: list[Album]) -> list[dict]:
             SourceMapping.entity_type == "album", SourceMapping.entity_id.in_(ids)
         )
     ):
-        sources.setdefault(mapping.entity_id, []).append(
-            {"provider": mapping.provider, "external_id": mapping.external_id}
-        )
+        sources.setdefault(mapping.entity_id, []).append(source_json(mapping))
     return [
         {
             "id": str(a.id),
@@ -155,7 +157,7 @@ def albums_json(db: Session, albums: list[Album]) -> list[dict]:
     ]
 
 
-def overview(db: Session, provider="all", q="", country="") -> dict:
+def overview(db: Session, provider="spotify", q="", country="") -> dict:
     artists = artist_scope(provider, q, country).with_only_columns(Artist.id)
     albums = scoped_albums(provider, q, country).with_only_columns(Album.id)
     artist_count = db.scalar(select(func.count()).select_from(artists.subquery()))
@@ -169,7 +171,7 @@ def overview(db: Session, provider="all", q="", country="") -> dict:
         "tracks": tracks,
         "provider": provider,
         "scope": "Tracked catalogue, not global popularity",
-        "demo_included": provider != "musicbrainz"
+        "demo_included": provider in ("all", "demo")
         and bool(
             db.scalar(
                 select(func.count())
@@ -186,7 +188,7 @@ def overview(db: Session, provider="all", q="", country="") -> dict:
     }
 
 
-def genres(db: Session, provider="all", q="", country="") -> list[dict]:
+def genres(db: Session, provider="spotify", q="", country="") -> list[dict]:
     artists = artist_scope(provider, q, country).with_only_columns(Artist.id)
     rows = db.execute(
         select(Genre.name, func.count(distinct(artist_genres.c.artist_id)))
@@ -198,7 +200,7 @@ def genres(db: Session, provider="all", q="", country="") -> list[dict]:
     return [{"genre": name, "artists": count} for name, count in rows]
 
 
-def releases(db: Session, provider="all", q="", country="") -> list[dict]:
+def releases(db: Session, provider="spotify", q="", country="") -> list[dict]:
     albums = scoped_albums(provider, q, country).with_only_columns(Album.id)
     year_bucket = func.substr(Album.release_date, 1, 4)
     rows = db.execute(

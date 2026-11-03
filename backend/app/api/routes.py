@@ -26,7 +26,7 @@ DB = Annotated[Session, Depends(get_db)]
 @router.get("/dashboard/overview", tags=["analytics"])
 def dashboard(
     db: DB,
-    provider: Provider = "all",
+    provider: Provider = "spotify",
     q: str = Query("", max_length=150),
     country: str = Query("", max_length=3),
 ):
@@ -37,7 +37,7 @@ def dashboard(
 def search_artists(
     db: DB,
     q: str = Query("", max_length=150),
-    provider: Provider = "all",
+    provider: Provider = "spotify",
     country: str = Query("", max_length=3),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
@@ -104,7 +104,7 @@ def artist_albums(artist_id: UUID, db: DB):
 @router.get("/albums", tags=["albums"])
 def album_list(
     db: DB,
-    provider: Provider = "all",
+    provider: Provider = "spotify",
     q: str = Query("", max_length=150),
     country: str = Query("", max_length=3),
     limit: int = Query(20, ge=1, le=100),
@@ -124,7 +124,7 @@ def album_list(
 @router.get("/analytics/genres", tags=["analytics"])
 def genre_distribution(
     db: DB,
-    provider: Provider = "all",
+    provider: Provider = "spotify",
     q: str = Query("", max_length=150),
     country: str = Query("", max_length=3),
 ):
@@ -137,7 +137,7 @@ def genre_distribution(
 @router.get("/analytics/releases", tags=["analytics"])
 def release_trends(
     db: DB,
-    provider: Provider = "all",
+    provider: Provider = "spotify",
     q: str = Query("", max_length=150),
     country: str = Query("", max_length=3),
 ):
