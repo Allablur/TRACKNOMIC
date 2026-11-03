@@ -12,6 +12,12 @@ import {
   MAX_FILE_BYTES,
 } from "@/lib/bulk-import";
 import { field, panel } from "./shared";
+const releaseLabels: Record<string, string> = {
+  album: "Albums",
+  single: "Singles / EPs",
+  compilation: "Compilations",
+  appears_on: "Guest appearances",
+};
 const savedKey = "trackonomics.spotify.bulk.batch";
 function subscribe(listener: () => void) {
   window.addEventListener("storage", listener);
@@ -52,6 +58,11 @@ export function BulkImportView() {
   const [tokenDraft, setTokenDraft] = useState("");
   const [token, setToken] = useState("");
   const [input, setInput] = useState("");
+  const [releaseTypes, setReleaseTypes] = useState<string[]>([
+    "album",
+    "single",
+    "compilation",
+  ]);
   const [fileError, setFileError] = useState("");
   const [batchId, setBatchId] = useState("");
   const [reconnect, setReconnect] = useState("");
@@ -100,7 +111,14 @@ export function BulkImportView() {
     setError("");
     try {
       const value = tokenDraft.trim();
-      await importRequest("/access", value);
+      const access = await importRequest<{ full_discography?: boolean }>(
+        "/access",
+        value,
+      );
+      if (!access.full_discography)
+        throw new Error(
+          "Deploy the latest API to enable full-discography imports on this screen.",
+        );
       setToken(value);
       setTokenDraft("");
       setReload((n) => n + 1);
@@ -115,14 +133,20 @@ export function BulkImportView() {
     }
   }
   async function create() {
-    if (!parsed.ids.length || parsed.errors.length) return;
+    if (!parsed.ids.length || parsed.errors.length || !releaseTypes.length)
+      return;
     setBusy(true);
     setError("");
     requestId.current ??= crypto.randomUUID();
     try {
       const data = await importRequest<BulkBatch>("", token, {
         method: "POST",
-        body: { request_id: requestId.current, artist_ids: parsed.ids },
+        body: {
+          request_id: requestId.current,
+          artist_ids: parsed.ids,
+          import_mode: "full",
+          release_types: releaseTypes,
+        },
       });
       setBatch(data);
       setBatchId(data.id);
@@ -168,6 +192,17 @@ export function BulkImportView() {
   const finished = batch
     ? batch.counts.succeeded + batch.counts.failed + batch.counts.cancelled
     : 0;
+  const importing =
+    batch?.items.filter(
+      (item) =>
+        item.status === "running" ||
+        (item.status === "pending" &&
+          item.progress &&
+          item.progress.phase !== "done"),
+    ).length || 0;
+  const waiting =
+    batch?.items.filter((item) => item.status === "pending" && !item.progress)
+      .length || 0;
   return (
     <>
       <PageHeading
@@ -184,7 +219,7 @@ export function BulkImportView() {
           [
             Clock3,
             "One at a time",
-            "At least 60 seconds between artists; Spotify limits may add a wait.",
+            "Complete selected release types, with all available tracks. Spotify limits may add a wait.",
           ],
           [
             CheckCircle2,
@@ -275,6 +310,44 @@ export function BulkImportView() {
             CSV files can use an artist_id or spotify_url column; other columns
             are ignored. No JSON is needed.
           </p>
+          <fieldset className="mt-5 rounded-lg border border-border p-4">
+            <legend className="px-2 text-sm font-semibold">
+              Release types to import
+            </legend>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Import every Spotify-available release of the selected types, with
+              all track pages. There is no five-album limit.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {[
+                ["album", "Albums"],
+                ["single", "Singles & EPs"],
+                ["compilation", "Compilations"],
+                ["appears_on", "Guest appearances"],
+              ].map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={releaseTypes.includes(value)}
+                    onChange={(event) => {
+                      setReleaseTypes((current) =>
+                        event.target.checked
+                          ? [...current, value]
+                          : current.filter((item) => item !== value),
+                      );
+                      requestId.current = null;
+                    }}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+            {!releaseTypes.length && (
+              <p role="alert" className="mt-3 text-sm text-red-700">
+                Select at least one release type.
+              </p>
+            )}
+          </fieldset>
           <label className="mt-5 grid gap-2 text-sm font-medium">
             Artist links
             <textarea
@@ -333,7 +406,8 @@ export function BulkImportView() {
               busy ||
               !parsed.ids.length ||
               parsed.errors.length > 0 ||
-              !!fileError
+              !!fileError ||
+              !releaseTypes.length
             }
             onClick={() => void create()}
           >
@@ -431,6 +505,11 @@ export function BulkImportView() {
               <p className="mt-2 text-xs font-medium uppercase tracking-wide text-primary">
                 Batch {batch.status}
               </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {batch.import_mode === "full"
+                  ? `Full catalogue · ${(batch.release_types || []).map((type) => releaseLabels[type] || type).join(", ")}`
+                  : "Legacy limited snapshot. Create a new batch to import the full available catalogue."}
+              </p>
               <p className="mt-2 break-all text-xs text-muted-foreground">
                 Batch ID:{" "}
                 <span className="select-all font-mono">{batch.id}</span>
@@ -493,7 +572,7 @@ export function BulkImportView() {
           />
           <p className="mt-3 text-sm text-muted-foreground">
             {batch.status === "active"
-              ? `${batch.counts.pending} queued · ${batch.counts.running} importing. Requests run one at a time.`
+              ? `${waiting} waiting · ${importing} in progress. Discographies are saved page by page.`
               : batch.status === "paused"
                 ? "Paused. Check any failed artist’s message, then resume or retry failed entries."
                 : batch.status === "cancelled"
@@ -502,7 +581,7 @@ export function BulkImportView() {
           </p>
           {batch.status === "active" && batch.next_attempt_at && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Next queued attempt no earlier than{" "}
+              Next import step no earlier than{" "}
               {new Date(batch.next_attempt_at).toLocaleTimeString()}. Spotify
               may request an additional wait.
             </p>
@@ -520,7 +599,7 @@ export function BulkImportView() {
               </caption>
               <thead>
                 <tr>
-                  {["Artist", "Status", "Attempts this cycle", "Details"].map(
+                  {["Artist", "Status", "Steps this cycle", "Details"].map(
                     (h) => (
                       <th key={h} className="p-3">
                         {h}
@@ -542,16 +621,31 @@ export function BulkImportView() {
                         {item.name || item.spotify_id}
                       </a>
                     </th>
-                    <td className="p-3">{statuses[item.status]}</td>
+                    <td className="p-3">
+                      {item.status === "pending" &&
+                      item.progress &&
+                      item.progress.phase !== "done"
+                        ? "Importing discography"
+                        : statuses[item.status]}
+                    </td>
                     <td className="p-3">{item.attempts}</td>
                     <td className="max-w-sm p-3 text-xs leading-5">
+                      {item.progress && (
+                        <p className="mb-2">
+                          {item.progress.releases_imported} releases completed ·{" "}
+                          {item.progress.tracks_imported} track positions
+                          processed
+                        </p>
+                      )}
                       {item.error || ""}
                       {item.artist_id && (
                         <Link
                           className="text-primary underline"
                           href={`/artists/${item.artist_id}`}
                         >
-                          View artist
+                          {item.status === "succeeded"
+                            ? "View artist"
+                            : "View artist (partial)"}
                         </Link>
                       )}
                     </td>

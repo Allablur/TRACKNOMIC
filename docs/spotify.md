@@ -22,8 +22,8 @@ Merge the Spotify integration pull request into `main` once CI passes. In Render
 | `SPOTIFY_CLIENT_ID` | Client ID from your Developer app |
 | `SPOTIFY_CLIENT_SECRET` | Client Secret, entered securely in Render |
 | `SPOTIFY_MARKET` | `ZA`, or another two-letter uppercase market you intend to use |
-| `SPOTIFY_MAX_ALBUMS` | `5` initially |
-| `SPOTIFY_MAX_TRACKS_PER_ALBUM` | `50` initially |
+| `SPOTIFY_MAX_ALBUMS` | `5` (legacy single-request endpoint only) |
+| `SPOTIFY_MAX_TRACKS_PER_ALBUM` | `50` (legacy single-request endpoint only) |
 | `INGESTION_ENABLED` | `true` |
 | `INGESTION_TOKEN` | A separate random operator token of at least 32 characters |
 
@@ -39,7 +39,7 @@ Keep `API_URL` pointing to your actual Render HTTPS API base URL, with no traili
 
 ## 4. Import your first real artist
 
-For multiple artists, use **Bulk import** in the website: unlock with your operator token, paste links or upload a CSV, and start the saved queue. See [bulk-import.md](bulk-import.md). No Swagger JSON is needed. The single-artist alternative follows below.
+For multiple artists, use **Bulk import** in the website: unlock with your operator token, paste links or upload a CSV, choose **Albums**, **Singles & EPs**, optional **Compilations** / **Guest appearances**, and start the saved queue. This website flow imports all available pages and resumes saved progress after interruptions. It does not use the five-album/fifty-track limits. Requeue an existing artist to expand an earlier limited import. See [bulk-import.md](bulk-import.md). No Swagger JSON is needed. The single-artist alternative follows below.
 
 1. Open the artist in Spotify. Use **Share → Copy link to artist**. Use an artist link, not an album, playlist or track link.
 2. Open `https://YOUR-API-HOST/docs` in a trusted browser.
@@ -68,9 +68,9 @@ The helper prompts privately for your operator token, enforces HTTPS except for 
 
 ## 5. Understand the imported scope
 
-The initial defaults fetch up to five album/single entries and fifty track positions per release in the chosen market. These are bounded catalogue counts, not total Spotify streams, listeners, complete discographies or global popularity. Raise limits cautiously (maximum 20 albums and 200 positions per album); the importer has a time budget and aborts without saving partial catalogue updates if it cannot finish. Pagination uses locally constructed Spotify endpoints, never arbitrary upstream pagination URLs. No artwork/audio is downloaded or rehosted.
+The legacy single-request endpoint defaults fetch up to five album/single entries and fifty track positions per release in the chosen market. These are bounded catalogue counts, not total Spotify streams, listeners, complete discographies or global popularity. Raise limits cautiously (maximum 20 albums and 200 positions per album); the importer has a time budget and aborts without saving partial catalogue updates if it cannot finish. Pagination uses locally constructed Spotify endpoints, never arbitrary upstream pagination URLs. No artwork/audio is downloaded or rehosted.
 
-Spotify access tokens are cached until shortly before expiry. A 401 refreshes authorization once; transient server failures have bounded retries. A 429 is returned with Spotify's Retry-After without sleeping through long cooldowns or inventing replacement data. Import failures roll back catalogue changes while preserving a failed ingestion run, and the global lock/cooldown still protects the service.
+Spotify access tokens are cached until shortly before expiry. A 401 refreshes authorization once; transient server failures have bounded retries. A 429 is returned with Spotify's Retry-After without sleeping through long cooldowns or inventing replacement data. Single-request failures roll back that request’s changes; full website imports retain earlier committed pages and retry their saved checkpoint. Failed ingestion runs are preserved, and the global lock/cooldown still protects the service.
 
 ## Troubleshooting
 

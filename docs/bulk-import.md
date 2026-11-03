@@ -27,23 +27,24 @@ Artist of your choice,PASTE_THE_ARTIST_SHARE_LINK_HERE
 
 Replace the placeholder with a genuine artist link before uploading. Files/pasted text are limited to 64 KB and 100 unique artists per batch. CSV quoting, BOM and CRLF are supported. Invalid rows are reported before submission; fix them before starting. Duplicates within the submitted list are removed even if they use different link/URI formats. Separate intentional batches may reimport an existing artist, updating the same canonical Spotify record.
 
-5. Click **Start import**. The server saves the normalized artist IDs and returns a batch ID. An idempotency key prevents a repeated submission after an ambiguous network error from creating the same batch twice.
-6. Follow the per-artist statuses: **Queued**, **Importing**, **Imported**, **Failed** or **Cancelled**. Artist names appear when real metadata is imported; unknown names are not invented. **View artist** opens successful imports in your catalogue.
+5. Under **Release types to import**, choose **Albums** and **Singles & EPs** to include both. **Compilations** is also selected by default; **Guest appearances** is optional. EPs use Spotify’s single category. You can select singles only. Full website imports follow all available release and track pages without the five-album/fifty-track cutoff. Submit an existing artist again to expand an earlier limited import.
+6. Click **Start import**. The server saves the normalized artist IDs and returns a batch ID. An idempotency key prevents a repeated submission after an ambiguous network error from creating the same batch twice.
+7. Follow the per-artist statuses: **Queued**, **Importing**, **Imported**, **Failed** or **Cancelled**. Artist names appear when real metadata is imported; unknown names are not invented. **View artist** opens successful imports in your catalogue. During import, completed releases and processed track positions are shown; **View artist (partial)** opens data saved so far. Track positions across releases are not unique songs. Imported means the final page succeeded.
 
 ## Timing and background behavior
 
-Imports run one at a time. The existing 60-second per-provider cooldown applies across both manual and bulk Spotify imports. Spotify's Retry-After can require a longer wait, and that backoff is saved in PostgreSQL so all workers/manual imports respect it. The screen shows the next eligible attempt time; it is not a guarantee of completion at that instant.
+Imports run one bounded page at a time, saving data and a continuation checkpoint together. The 60-second cooldown applies to new artists and manual imports. Continuation pages retain provider pacing and persisted Spotify backoff without another minute per page. Spotify's Retry-After can require a longer wait, and that backoff is saved in PostgreSQL so all workers/manual imports respect it. The screen shows the next eligible attempt time; it is not a guarantee of completion at that instant.
 
-The queue survives a page refresh or API restart. On free hosting, processing can pause while the API is asleep/down; it resumes when the service is awake. A claimed item interrupted by a crash becomes eligible for recovery after its two-minute lease expires. Existing source-ID upserts prevent duplicate artist/release/track records if interrupted work must be retried. This is at-least-once recovery, not an exactly-once external-request guarantee.
+The queue survives a page refresh or API restart. On free hosting, processing can pause while the API is asleep/down; it resumes when the service is awake. A claimed item interrupted by a crash becomes eligible for recovery after its two-minute lease expires. Saved checkpoints resume the next page after restarts. Source-ID upserts prevent duplicate records. Older batches retain their original limited scope and are labelled accordingly; create a new batch for full discographies. This is at-least-once recovery, not an exactly-once external-request guarantee.
 
 Only the opaque batch ID is saved in browser local storage. After refreshing or reopening the site, enter your operator token again to reconnect. Copy the batch ID for use on another device; enter it in **Reconnect to a batch** after unlocking. Never put the token into the batch ID field or share it in screenshots.
 
 ## Controls
 
-- **Pause queue:** no new artists are started; an in-flight request can finish.
+- **Pause queue:** no new pages are started; an in-flight request can finish.
 - **Resume queue:** continue pending artists while respecting cooldowns.
-- **Cancel remaining:** cancel unstarted work. Already imported data is not deleted. An in-flight request can still finish; use **Refresh progress** to see its final result.
-- **Retry failed artists:** requeue only failed entries, preserving successful ones. Attempt counts restart for the new retry cycle; ingestion audit runs retain historical attempts.
+- **Cancel remaining:** cancel remaining work, including unfinished discographies. Already imported data is not deleted. An in-flight request can still finish; use **Refresh progress** to see its final result.
+- **Retry failed artists:** requeue only failed entries, preserving successful ones. Saved page checkpoints are retained so retry continues the failed page. Earlier pages stay visible after failure/cancellation. Stale track positions are removed only after that release’s last track page succeeds. Step counts restart for the new retry cycle; ingestion audit runs retain historical attempts.
 - **Lock screen:** forget the in-memory token without cancelling the server queue.
 - **Create another batch:** available after completion/cancellation. Active/paused batches are capped at ten per API database.
 
@@ -56,10 +57,12 @@ The screen never stores Spotify app credentials. It submits normalized IDs, not 
 Protected endpoints under `/api/v1/ingestion/spotify/batches`:
 
 - `GET /access`: validate operator access and configured worker/client-credential presence; does not claim live Spotify authorization was verified.
-- `POST /`: create a batch with `request_id` (UUID), `artist_ids` (1–100 values), optional `name`; returns 202. Reusing the request ID with different input returns 409.
+- `POST /`: create a batch with `request_id` (UUID), `artist_ids` (1–100 values), optional `name`, `import_mode: "full"`, and nonempty `release_types` (`album`, `single`, `compilation`, `appears_on`; default first three); returns 202. Reusing the request ID with different input returns 409.
 - `GET /{batch_id}`: saved progress, counts, errors and timing.
 - `POST /{batch_id}/pause`, `/resume`, `/cancel`, `/retry`: control work.
 
 The migration adds batch/item tables, a nullable ingestion-run retry timestamp and cooldown indexes. Worker claims use PostgreSQL advisory locks plus row locks/leases; multiple API processes cannot import queue items simultaneously. Individual imports share the original provider lock, transactional upserts and audit handling. Batch creation has a short advisory transaction lock, an active-batch cap and an idempotent request UUID. Control/finalization locks serialize cancellation and completion updates. Queue records never contain authorization tokens.
 
 The browser suite uses mocked protected queue responses, and a separate local test runs the real API/background worker against disposable PostgreSQL with only the upstream Spotify provider mocked. No deployed database, Spotify quota or real operator token is used in those tests.
+
+Migration `6fb6a95bedbc` adds full-import scope and page checkpoints; existing jobs are backfilled as limited imports. No Render limit setting needs changing for new website imports. Spotify controls availability in the configured market: full means every returned page for selected groups, not every release worldwide. Guest appearances can include complete releases containing other artists’ tracks. No audio/artwork is downloaded.

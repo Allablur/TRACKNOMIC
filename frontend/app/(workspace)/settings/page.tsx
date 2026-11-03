@@ -62,12 +62,13 @@ export default function Page() {
         <div>
           <h2 className="font-semibold">Market and import scope</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            The default market is ZA. Each import fetches up to five
-            albums/singles and up to fifty track positions per release. These
-            limits are configurable on the API server; tracked counts are not
-            complete Spotify discography or listening statistics. Country is
-            unavailable unless a provider supplies it; market is not an artist’s
-            country.
+            The default market is ZA. On Bulk import, choose albums,
+            singles/EPs, compilations or guest appearances. New batches page
+            through every available release and track in the selected groups,
+            saving progress between pages. Catalogue counts depend on Spotify
+            access and market, and are not streaming totals. The older
+            single-request API remains a limited snapshot; use the website for
+            full-discography imports.
           </p>
         </div>
         <div>

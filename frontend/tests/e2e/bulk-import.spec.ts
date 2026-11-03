@@ -31,6 +31,8 @@ function batch(status = "active", states = ["pending", "pending"]) {
   });
   return {
     id: batchId,
+    import_mode: "full",
+    release_types: ["album", "single", "compilation"],
     name: "Spotify bulk import",
     status,
     server_time: new Date().toISOString(),
@@ -57,7 +59,9 @@ test("pastes, deduplicates, retries failed entries and reconnects without saving
     expect(route.request().headers()["authorization"]).toBe(`Bearer ${token}`);
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/access"))
-      return route.fulfill({ json: { configured: true, max_artists: 100 } });
+      return route.fulfill({
+        json: { configured: true, max_artists: 100, full_discography: true },
+      });
     if (route.request().method() === "POST" && path.endsWith("/batches")) {
       submissions.push(route.request().postDataJSON());
       current = batch("completed", ["succeeded", "failed"]);
@@ -84,7 +88,11 @@ test("pastes, deduplicates, retries failed entries and reconnects without saving
     page.getByText("1 imported · 1 failed", { exact: false }),
   ).toBeVisible();
   expect(submissions).toHaveLength(1);
-  expect(submissions[0]).toMatchObject({ artist_ids: [artistA, artistB] });
+  expect(submissions[0]).toMatchObject({
+    artist_ids: [artistA, artistB],
+    import_mode: "full",
+    release_types: ["album", "single", "compilation"],
+  });
   expect(JSON.stringify(submissions[0])).not.toContain(token);
   await page.getByRole("button", { name: "Retry failed artists" }).click();
   await expect(
@@ -113,7 +121,9 @@ test("CSV upload validates rows and supports pause, resume and cancellation", as
   await page.route("**/api/v1/ingestion/spotify/batches**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/access"))
-      return route.fulfill({ json: { configured: true, max_artists: 100 } });
+      return route.fulfill({
+        json: { configured: true, max_artists: 100, full_discography: true },
+      });
     if (path.endsWith("/pause")) current = batch("paused");
     if (path.endsWith("/resume")) current = batch("active");
     if (path.endsWith("/cancel"))
@@ -176,7 +186,9 @@ test("retrying an ambiguous submission reuses its idempotency key", async ({
   await page.route("**/api/v1/ingestion/spotify/batches**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/access"))
-      return route.fulfill({ json: { configured: true, max_artists: 100 } });
+      return route.fulfill({
+        json: { configured: true, max_artists: 100, full_discography: true },
+      });
     if (route.request().method() === "POST") {
       keys.push(route.request().postDataJSON().request_id);
       if (keys.length === 1) return route.abort();
@@ -197,7 +209,9 @@ test("retrying an ambiguous submission reuses its idempotency key", async ({
 test("bulk input stays within the mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.route("**/api/v1/ingestion/spotify/batches/access", (route) =>
-    route.fulfill({ json: { configured: true, max_artists: 100 } }),
+    route.fulfill({
+      json: { configured: true, max_artists: 100, full_discography: true },
+    }),
   );
   await page.goto("/imports");
   await unlock(page);
@@ -207,4 +221,76 @@ test("bulk input stays within the mobile viewport", async ({ page }) => {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+});
+
+test("on-site release choices submit singles-only full discographies and show page progress", async ({
+  page,
+}) => {
+  let submitted: Record<string, unknown> | null = null;
+  await page.route("**/api/v1/ingestion/spotify/batches**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/access"))
+      return route.fulfill({
+        json: { configured: true, max_artists: 100, full_discography: true },
+      });
+    if (route.request().method() === "POST")
+      submitted = route.request().postDataJSON();
+    const data = batch();
+    data.release_types = ["single"];
+    const withProgress = {
+      ...data,
+      items: data.items.map((item, index) => ({
+        ...item,
+        progress: index
+          ? null
+          : { phase: "tracks", releases_imported: 8, tracks_imported: 72 },
+        name: index ? null : "Full catalogue fixture",
+      })),
+    };
+    return route.fulfill({
+      status: path.endsWith("/batches") ? 202 : 200,
+      json: withProgress,
+    });
+  });
+  await page.goto("/imports");
+  await unlock(page);
+  await expect(page.getByLabel("Albums", { exact: true })).toBeChecked();
+  await expect(page.getByLabel("Singles & EPs", { exact: true })).toBeChecked();
+  await page.getByLabel("Albums", { exact: true }).uncheck();
+  await page.getByLabel("Compilations", { exact: true }).uncheck();
+  await page.getByLabel("Singles & EPs", { exact: true }).uncheck();
+  await page.getByLabel("Artist links").fill(artistA);
+  await expect(
+    page.getByRole("button", { name: "Start import (1 artists)" }),
+  ).toBeDisabled();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "Select at least one release type",
+  );
+  await page.getByLabel("Singles & EPs", { exact: true }).check();
+  await page.getByRole("button", { name: "Start import (1 artists)" }).click();
+  await expect(
+    page.getByText("8 releases completed · 72 track positions processed"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Importing discography", { exact: true }),
+  ).toBeVisible();
+  expect(submitted).toMatchObject({
+    import_mode: "full",
+    release_types: ["single"],
+  });
+});
+
+test("an old API cannot silently fall back to a five-album import", async ({
+  page,
+}) => {
+  await page.route("**/api/v1/ingestion/spotify/batches/access", (route) =>
+    route.fulfill({ json: { configured: true, max_artists: 100 } }),
+  );
+  await page.goto("/imports");
+  await page.getByLabel("Ingestion token").fill(token);
+  await page.getByRole("button", { name: "Unlock imports" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText(
+    "Deploy the latest API",
+  );
+  await expect(page.getByLabel("Artist links")).toHaveCount(0);
 });

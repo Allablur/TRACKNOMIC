@@ -14,7 +14,11 @@ from app.core.database import SessionLocal, engine
 from app.models import SpotifyImportBatch, SpotifyImportItem
 from app.providers.spotify import SpotifyError
 from app.services.import_control import next_import_at
-from app.services.spotify_import import get_spotify, perform_spotify_import
+from app.services.spotify_import import (
+    get_spotify,
+    perform_discography_step,
+    perform_spotify_import,
+)
 
 logger = logging.getLogger(__name__)
 TERMINAL = {"succeeded", "failed", "cancelled"}
@@ -48,11 +52,17 @@ def batch_json(db, batch):
         status: sum(i.status == status for i in batch.items)
         for status in ["pending", "running", "succeeded", "failed", "cancelled"]
     }
-    pending = [i.available_at for i in batch.items if i.status == "pending"]
-    eligible = max(next_import_at(db), min(pending)) if pending else None
+    pending = [
+        max(i.available_at, next_import_at(db, continuation=bool(i.checkpoint)))
+        for i in batch.items
+        if i.status == "pending"
+    ]
+    eligible = min(pending) if pending else None
     return {
         "id": str(batch.id),
         "name": batch.name,
+        "import_mode": batch.import_mode,
+        "release_types": batch.release_types,
         "status": batch.status,
         "created_at": batch.created_at.isoformat(),
         "server_time": now.isoformat(),
@@ -72,13 +82,23 @@ def batch_json(db, batch):
                 "error": i.error,
                 "available_at": i.available_at.isoformat(),
                 "last_http_status": i.last_http_status,
+                "progress": {
+                    "phase": i.checkpoint.get("phase"),
+                    "releases_imported": i.checkpoint.get("releases_imported", 0),
+                    "tracks_imported": i.checkpoint.get("tracks_imported", 0),
+                }
+                if i.checkpoint
+                else None,
             }
             for i in batch.items
         ],
     }
 
 
-def create_batch(db, artist_ids, name, request_id):
+def create_batch(db, artist_ids, name, request_id, import_mode="full", release_types=None):
+    release_types = release_types or (
+        ["album", "single"] if import_mode == "limited" else ["album", "single", "compilation"]
+    )
     # Keep creation bounded even if multiple authenticated requests arrive together.
     db.execute(text("SELECT pg_advisory_xact_lock(824020)"))
     existing = db.scalar(
@@ -86,7 +106,12 @@ def create_batch(db, artist_ids, name, request_id):
     )
     if existing is not None:
         existing = load_batch(db, existing.id)
-        if [item.spotify_id for item in existing.items] != artist_ids or existing.name != name:
+        if (
+            [item.spotify_id for item in existing.items] != artist_ids
+            or existing.name != name
+            or existing.import_mode != import_mode
+            or existing.release_types != release_types
+        ):
             raise HTTPException(409, "This request ID was already used for a different artist list")
         return existing
     active = db.scalar(
@@ -98,6 +123,8 @@ def create_batch(db, artist_ids, name, request_id):
         raise HTTPException(409, "Finish or cancel an existing batch before creating another")
     batch = SpotifyImportBatch(
         request_id=request_id,
+        import_mode=import_mode,
+        release_types=release_types,
         name=name,
         items=[
             SpotifyImportItem(spotify_id=id, position=position)
@@ -128,6 +155,7 @@ def change_batch(db, batch_id, action):
             if item.status == "failed":
                 item.status, item.error, item.last_http_status = "pending", None, None
                 item.attempts, item.available_at, item.completed_at = 0, datetime.now(UTC), None
+                item.rate_limit_attempts = 0
         batch.status = "active"
     settle(batch)
     db.commit()
@@ -146,8 +174,6 @@ def process_one(db):
 
 
 def _process_one(db):
-    if next_import_at(db) > datetime.now(UTC):
-        return False
     now = datetime.now(UTC)
     item = db.scalar(
         select(SpotifyImportItem)
@@ -165,13 +191,23 @@ def _process_one(db):
     )
     if item is None:
         return False
+    if next_import_at(db, continuation=bool(item.checkpoint)) > datetime.now(UTC):
+        db.rollback()
+        return False
+    mode = db.get(SpotifyImportBatch, item.batch_id).import_mode
+    groups = db.get(SpotifyImportBatch, item.batch_id).release_types
     item.status, item.lease_until = "running", now + timedelta(seconds=120)
     item.attempts += 1
     item_id, batch_id, identifier = item.id, item.batch_id, item.spotify_id
     db.commit()
     result, failure = None, None
     try:
-        result = perform_spotify_import(db, identifier, get_spotify())
+        if mode == "full":
+            result = perform_discography_step(
+                db, identifier, get_spotify(), item.checkpoint, groups
+            )
+        else:
+            result = perform_spotify_import(db, identifier, get_spotify())
     except (SpotifyError, HTTPException) as exc:
         failure = exc
         db.rollback()
@@ -185,13 +221,25 @@ def _process_one(db):
     item = next(i for i in batch.items if i.id == item_id)
     item.lease_until = None
     if result is not None:
-        item.status, item.error, item.last_http_status = "succeeded", None, 201
+        complete = result.get("complete", True)
+        item.error, item.last_http_status, item.rate_limit_attempts = (
+            None,
+            201 if complete else 202,
+            0,
+        )
         item.artist_id, item.artist_name = UUID(result["id"]), result["name"]
-        item.completed_at = datetime.now(UTC)
+        if "checkpoint" in result:
+            item.checkpoint = result["checkpoint"]
+        if complete:
+            item.status, item.completed_at = "succeeded", datetime.now(UTC)
+        elif batch.status != "cancelled":
+            item.status, item.available_at, item.completed_at = "pending", datetime.now(UTC), None
     else:
         status = failure.status_code
         detail = str(failure) if isinstance(failure, SpotifyError) else str(failure.detail)
-        if status == 429 and batch.status != "cancelled" and item.attempts < 5:
+        if status == 429 and isinstance(failure, SpotifyError):
+            item.rate_limit_attempts += 1
+        if status == 429 and batch.status != "cancelled" and item.rate_limit_attempts < 5:
             headers = getattr(failure, "headers", None) or {}
             retry = getattr(failure, "retry_after", None) or int(headers.get("Retry-After", "60"))
             item.status, item.error, item.last_http_status = "pending", detail, 429
