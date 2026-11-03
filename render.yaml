@@ -1,0 +1,32 @@
+# Review plans and backup requirements in Render before deploying.
+services:
+  - type: web
+    name: trackonomics-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install uv==0.12.23 && uv sync --locked --no-dev
+    startCommand: bash scripts/start-production.sh
+    healthCheckPath: /health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.14
+      - key: DATABASE_URL
+        fromDatabase:
+          name: trackonomics-db
+          property: connectionString
+      - key: INGESTION_ENABLED
+        value: "false"
+      - key: CORS_ORIGINS
+        value: '[]'
+      - key: MUSICBRAINZ_MAX_RELEASES
+        value: "20"
+      - key: MUSICBRAINZ_USER_AGENT
+        value: Trackonomics/0.1 (https://github.com/Allablur/TRACKNOMIC)
+databases:
+  - name: trackonomics-db
+    plan: free
+    databaseName: trackonomics
+    user: trackonomics
+    ipAllowList: []

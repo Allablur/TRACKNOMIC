@@ -14,7 +14,7 @@ export default function Home() {
             Trackonomics
           </Link>
           <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-            Project foundation · Phase 1
+            Music catalogue intelligence
           </span>
         </div>
       </header>
@@ -28,33 +28,33 @@ export default function Home() {
           has a story.
         </h1>
         <p className="mt-7 max-w-xl text-lg leading-8 text-muted-foreground">
-          The foundation for exploring artists, releases, and the connections
-          behind the music. Analytics will arrive in the next development
-          phases.
+          Explore attributed artist metadata, compare catalogues, and uncover
+          patterns in release activity. Turn the music you track into clear,
+          exportable insights.
         </p>
         <div className="mt-9">
           <Button asChild>
-            <a href="#foundation">
-              Explore the foundation
+            <Link href="/dashboard">
+              Open dashboard
               <ArrowUpRight aria-hidden="true" size={16} />
-            </a>
+            </Link>
           </Button>
         </div>
         <section
-          id="foundation"
-          aria-label="Project foundation"
+          id="features"
+          aria-label="Catalogue features"
           className="mt-24 grid gap-6 border-t border-border pt-8 sm:grid-cols-3"
         >
           {[
             {
               icon: AudioLines,
               title: "Artist intelligence",
-              text: "A foundation for artist metadata and discography exploration.",
+              text: "Explore attributed artist metadata and tracked discographies.",
             },
             {
               icon: Layers3,
               title: "Catalogue insights",
-              text: "Release and genre analytics planned for future phases.",
+              text: "Compare release activity and genre representation in your catalogue.",
             },
             {
               icon: Database,
@@ -77,7 +77,8 @@ export default function Home() {
         </section>
       </main>
       <footer className="mx-auto max-w-6xl border-t border-border px-6 py-6 text-xs text-muted-foreground">
-        Trackonomics · Music industry analytics · No live music data connected
+        Trackonomics · Music industry analytics · Source attribution on every
+        record
       </footer>
     </div>
   );

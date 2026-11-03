@@ -1,0 +1,430 @@
+{
+  "provider": "demo",
+  "description": "Entirely fictional demonstration catalogue. No audience metrics.",
+  "artists": [
+    {
+      "id": "demo-artist-0",
+      "name": "Velvet Meridian",
+      "country": "ZA",
+      "type": "Group",
+      "disambiguation": "Fictional demo artist; not a real-world measurement.",
+      "genres": [
+        "alternative",
+        "soul"
+      ],
+      "albums": [
+        {
+          "id": "demo-album-0-0",
+          "title": "First Light / Velvet Meridian",
+          "release_date": "2020",
+          "release_type": "Album",
+          "tracks": [
+            {
+              "id": "demo-track-0-0-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-0-0-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-0-0-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        },
+        {
+          "id": "demo-album-0-1",
+          "title": "After the Rain / Velvet Meridian",
+          "release_date": "2021",
+          "release_type": "EP",
+          "tracks": [
+            {
+              "id": "demo-track-0-1-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-0-1-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-0-1-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-artist-1",
+      "name": "Atlas in Bloom",
+      "country": "GB",
+      "type": "Group",
+      "disambiguation": "Fictional demo artist; not a real-world measurement.",
+      "genres": [
+        "indie",
+        "alternative"
+      ],
+      "albums": [
+        {
+          "id": "demo-album-1-0",
+          "title": "First Light / Atlas in Bloom",
+          "release_date": "2021",
+          "release_type": "Album",
+          "tracks": [
+            {
+              "id": "demo-track-1-0-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-1-0-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-1-0-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        },
+        {
+          "id": "demo-album-1-1",
+          "title": "After the Rain / Atlas in Bloom",
+          "release_date": "2022",
+          "release_type": "EP",
+          "tracks": [
+            {
+              "id": "demo-track-1-1-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-1-1-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-1-1-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-artist-2",
+      "name": "Lunar Assembly",
+      "country": "US",
+      "type": "Group",
+      "disambiguation": "Fictional demo artist; not a real-world measurement.",
+      "genres": [
+        "electronic"
+      ],
+      "albums": [
+        {
+          "id": "demo-album-2-0",
+          "title": "First Light / Lunar Assembly",
+          "release_date": "2022",
+          "release_type": "Album",
+          "tracks": [
+            {
+              "id": "demo-track-2-0-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-2-0-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-2-0-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        },
+        {
+          "id": "demo-album-2-1",
+          "title": "After the Rain / Lunar Assembly",
+          "release_date": "2023",
+          "release_type": "EP",
+          "tracks": [
+            {
+              "id": "demo-track-2-1-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-2-1-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-2-1-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-artist-3",
+      "name": "Saffron Coast",
+      "country": "ZA",
+      "type": "Group",
+      "disambiguation": "Fictional demo artist; not a real-world measurement.",
+      "genres": [
+        "jazz",
+        "soul"
+      ],
+      "albums": [
+        {
+          "id": "demo-album-3-0",
+          "title": "First Light / Saffron Coast",
+          "release_date": "2023",
+          "release_type": "Album",
+          "tracks": [
+            {
+              "id": "demo-track-3-0-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-3-0-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-3-0-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        },
+        {
+          "id": "demo-album-3-1",
+          "title": "After the Rain / Saffron Coast",
+          "release_date": "2024",
+          "release_type": "EP",
+          "tracks": [
+            {
+              "id": "demo-track-3-1-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-3-1-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-3-1-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-artist-4",
+      "name": "Paper Satellites",
+      "country": "DE",
+      "type": "Group",
+      "disambiguation": "Fictional demo artist; not a real-world measurement.",
+      "genres": [
+        "electronic",
+        "indie"
+      ],
+      "albums": [
+        {
+          "id": "demo-album-4-0",
+          "title": "First Light / Paper Satellites",
+          "release_date": "2024",
+          "release_type": "Album",
+          "tracks": [
+            {
+              "id": "demo-track-4-0-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-4-0-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-4-0-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        },
+        {
+          "id": "demo-album-4-1",
+          "title": "After the Rain / Paper Satellites",
+          "release_date": "2025",
+          "release_type": "EP",
+          "tracks": [
+            {
+              "id": "demo-track-4-1-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-4-1-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-4-1-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-artist-5",
+      "name": "The Quiet Current",
+      "country": "JP",
+      "type": "Group",
+      "disambiguation": "Fictional demo artist; not a real-world measurement.",
+      "genres": [
+        "ambient"
+      ],
+      "albums": [
+        {
+          "id": "demo-album-5-0",
+          "title": "First Light / The Quiet Current",
+          "release_date": "2025",
+          "release_type": "Album",
+          "tracks": [
+            {
+              "id": "demo-track-5-0-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-5-0-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-5-0-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        },
+        {
+          "id": "demo-album-5-1",
+          "title": "After the Rain / The Quiet Current",
+          "release_date": "2026",
+          "release_type": "EP",
+          "tracks": [
+            {
+              "id": "demo-track-5-1-0",
+              "title": "Open Water",
+              "duration_ms": 180000,
+              "disc_number": 1,
+              "position": 1
+            },
+            {
+              "id": "demo-track-5-1-1",
+              "title": "Night Signal",
+              "duration_ms": 201000,
+              "disc_number": 1,
+              "position": 2
+            },
+            {
+              "id": "demo-track-5-1-2",
+              "title": "Homeward",
+              "duration_ms": 222000,
+              "disc_number": 1,
+              "position": 3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
