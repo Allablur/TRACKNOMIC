@@ -12,6 +12,7 @@ The screenshot uses explicitly labelled fictional test fixtures. Normal deployme
 
 - Responsive overview with artist/release/recording counts and interactive Recharts visualizations.
 - Paginated artist search and source/country/name filters; artist profiles and discographies.
+- Artist-profile [catalogue statistics](docs/catalogue-statistics.md): release-type counts, distinct track IDs, duration coverage, latest dated release and yearly activity calculated from saved data.
 - Comparison of two to five artists with explicit unavailable-metric states.
 - Album edition lists, partial source dates, genre representation and release-year trends.
 - Filtered CSV/PDF reports with source attribution, report limits and formula-safe CSV fields.

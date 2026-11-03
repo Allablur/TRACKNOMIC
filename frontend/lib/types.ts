@@ -47,3 +47,26 @@ export type Overview = {
 export type Genre = { genre: string; artists: number };
 export type Release = { year: number; releases: number };
 export type Filters = { provider: string; q: string; country: string };
+export type ArtistCatalogueStats = {
+  artist_id: string;
+  calculated_at: string;
+  scope: string;
+  release_count: number;
+  album_count: number;
+  single_ep_count: number;
+  compilation_count: number;
+  other_release_count: number;
+  distinct_track_count: number;
+  track_position_count: number;
+  known_duration_track_count: number;
+  known_duration_ms: number | null;
+  average_known_duration_ms: number | null;
+  undated_release_count: number;
+  latest_release: {
+    id: string;
+    title: string;
+    release_date: string;
+    date_precision: string;
+  } | null;
+  releases_by_year: Release[];
+};
